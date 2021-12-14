@@ -1,2 +1,7 @@
 # telegraph2epub
-download telegraph content as epub
+
+下载telegraph的内容至epub
+
+# 使用方法
+
+`python3 main.py <URL>`
