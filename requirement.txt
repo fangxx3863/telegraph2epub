@@ -1,0 +1,5 @@
+ebooklib
+download
+pillow
+uuid
+bs4
