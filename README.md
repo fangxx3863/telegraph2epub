@@ -13,8 +13,8 @@
 # 帮助内容
 
 ```
-telegraph2epub [-h] [-v version] [-f folder] [-u url] [-j jobs]
-    -h              显示帮助
+telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs]
+    -h help         显示帮助
     -v version      显示版本
     -f folder       指定下载路径
     -u url          下载链接
@@ -25,3 +25,9 @@ telegraph2epub [-h] [-v version] [-f folder] [-u url] [-j jobs]
     Version:        v1.0
     ReleaseTime:    2021/12/19 13:30 PM
 ```
+
+# TO DO LIST
+
+- [ ] 制作并打包多系统的CLI程序
+- [ ] 实现GUI
+- [ ] 添加cbz支持
