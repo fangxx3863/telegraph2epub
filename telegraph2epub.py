@@ -12,7 +12,7 @@ import re
 from PIL import Image
 import shutil
 import io
-import time
+import getopt
 from multiprocessing import Process, Pool
 
 
@@ -40,17 +40,37 @@ def downloadFile(url, path='file'):
         
     
 
-def writeToBook(title, author, content, coverName, coverFile, imgDir):
+def writeToBook(title, author, content, cover_name, cover_file, imgDir, folder=None):
+    """写入内容至epub
+
+    传入基本参数，并将其写出至epub
+
+    Args:
+        title (str): 书籍名称
+        author (str): 作者名称
+        content (str): 文章html内容
+        cover_name (str): 封面名称
+        cover_file (str): 封面路径
+        imgDir (str): 引用图片路径
+    """    
     book.set_identifier(str(uuid.uuid4()))
     book.set_title(title)
     book.set_language('zh')
     book.add_author(author)
-    book.set_cover(coverName, open(coverFile, 'rb').read())
+    cover_type = cover_file.split('.')[-1]
+    book.set_cover(cover_name + '.' + cover_type, open(cover_file, 'rb').read())
     c1 = epub.EpubHtml(title=title,
                        file_name='content.xhtml',
                        lang='zh')
     content = content.replace('png', 'jpg')
-    c1.set_content(str(content)[1:-1])
+    
+    # 添加CSS规则
+    css = '<style>img {text-align: center !important; text-indent: 0px !important; display: block !important; width: 100% !important}</style>'
+    content = str(content)[1:-1]
+    content = content + css
+    #print(content)
+    
+    c1.set_content(content)
     book.add_item(c1)
     book.toc = ((c1, )  # 添加c1到目录
                 )
@@ -73,15 +93,26 @@ def writeToBook(title, author, content, coverName, coverFile, imgDir):
     # basic spine
     book.spine = [c1, ]
 
+    '''
     # 添加CSS样式
     style = 'body {position: absolute; width: auto; height: 100%; margin: auto; text-align:center;}'
     content_css = epub.EpubItem(uid="style_content", file_name="style/content.css", media_type="text/css", content=style)
     book.add_item(content_css)
+    '''
 
-    epub.write_epub(title + '.epub', book)
+    if folder is None:
+        folder = ''
+    else:
+        isExists=os.path.exists(folder) #判断路径是否存在
+        if not isExists:
+            # 如果不存在则创建目录
+            os.makedirs(folder)
+        folder = str(folder) + '/'
+    
+    epub.write_epub(folder + title + '.epub', book)
     
 def getPage(url, ):
-    info = {'status': '', 'title': '', 'author': '', 'imgUrls': '', 'content': '', 'coverFile': ''}
+    info = {'status': '', 'title': '', 'author': '', 'imgUrls': '', 'content': '', 'cover_file': ''}
     page = requests.get(url)
     info['status'] = page.status_code
     print('Get Code:', page.status_code)
@@ -121,30 +152,71 @@ def getPage(url, ):
     #print(content)
     
     # 封面图文件名
-    info['coverFile'] = re.search('<img[^>]*>', content).group()[10:-3]
+    info['cover_file'] = re.search('<img[^>]*>', content).group()[10:-3]
     
     return info
     
-def downloadImage(url):
+def downloadImage(url, jobs):
     imgUrls = getPage(url)['imgUrls']
-    pool = Pool(8)
+    pool = Pool(int(jobs))
     errUrls = pool.map(downloadFile, imgUrls)
     errUrls = sorted(list(filter(None, errUrls)))
     while errUrls:
         errUrls = downloadFile(errUrls)
     #print(errUrls)
     
-if __name__ == "__main__":
+def main():
+    opts,args = getopt.getopt(sys.argv[1:],'-h-f:-v-u:-j:',['help','folder=','version','url=','jobs='])
+    jobs = 8
+    folder = None
+    for opt_name,opt_value in opts:
+        if opt_name in ('-h','--help'):
+            help_str = '''
+将telegraph的漫画或文章下载为epub文件
+
+telegraph2epub [-h] [-v version] [-f folder] [-u url] [-j jobs]
+    -h              显示帮助
+    -v version      显示版本
+    -f folder       指定下载路径
+    -u url          下载链接
+    -j jobs         下载线程
+    Warning:        下载过程中会创建file目录以存放临时文件,请保证运行目录下无同名文件或文件夹
+    Example:        telegraph2epub -u https://telegra.ph/xxx -j 32 -f book
+    About:          https://github.com/fangxx3863/telegraph2epub
+    Version:        v1.0
+    ReleaseTime:    2021/12/19 13:30 PM
+                      '''
+            print(help_str)
+            exit()
+            
+        if opt_name in ('-v','--version'):
+            print("Version is v1.0 ")
+            exit()
+            
+        if opt_name in ('-f','--folder'):
+            folder = opt_value
+            
+        if opt_name in ('-u', '--url'):
+            url = opt_value
+            
+        if opt_name in ('-j', '--jobs'):
+            jobs = opt_value
+        
+    
     try:
-        url = sys.argv[1]
-        downloadImage(url)
+        downloadImage(url, jobs)
         Page = getPage(url)
     except:
-        print('你未输入URL！')
+        print('你未输入URL,加入-h参数显示帮助!')
+        exit()
         
     try:
-        writeToBook(Page['title'], Page['author'], Page['content'], Page['title'], Page['coverFile'], 'file')
+        writeToBook(Page['title'], Page['author'], Page['content'], 'cover', Page['cover_file'], 'file', folder)
         shutil.rmtree('file')
     except:
-        print('写入文件错误！')
-        exit(0)
+        print('写入文件错误!')
+        exit()
+    
+
+if __name__ == "__main__":
+    main()
