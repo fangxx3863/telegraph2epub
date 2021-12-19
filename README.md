@@ -13,11 +13,12 @@
 # 帮助内容
 
 ```
-telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs]
+telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs] [-c cbz]
     -h help         显示帮助
     -v version      显示版本
     -f folder       指定下载路径
     -u url          下载链接
+    -c cbz          以cbz方式存储所有图像
     -j jobs         下载线程
     Warning:        下载过程中会创建file目录以存放临时文件,请保证运行目录下无同名文件或文件夹
     Example:        telegraph2epub -u https://telegra.ph/xxx -j 32 -f book
