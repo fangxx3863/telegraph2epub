@@ -13,6 +13,7 @@ from PIL import Image
 import shutil
 import io
 import getopt
+import zipfile
 from multiprocessing import Process, Pool
 
 
@@ -165,20 +166,34 @@ def downloadImage(url, jobs):
         errUrls = downloadFile(errUrls)
     #print(errUrls)
     
+
+def zipDir(dirpath, outFullName):
+    zip = zipfile.ZipFile(outFullName, "w", zipfile.ZIP_DEFLATED)
+    for path, dirnames, filenames in os.walk(dirpath):
+        # 去掉目标跟路径，只对目标文件夹下边的文件及文件夹进行压缩
+        fpath = path.replace(dirpath, '')
+ 
+        for filename in filenames:
+            zip.write(os.path.join(path, filename), os.path.join(fpath, filename))
+    zip.close()
+
+
 def main():
-    opts,args = getopt.getopt(sys.argv[1:],'-h-f:-v-u:-j:',['help','folder=','version','url=','jobs='])
+    opts,args = getopt.getopt(sys.argv[1:],'-h-f:-v-u:-j:-c',['help','folder=','version','url=','jobs=','cbz'])
     jobs = 8
     folder = None
+    cbz = False
     for opt_name,opt_value in opts:
         if opt_name in ('-h','--help'):
             help_str = '''
 将telegraph的漫画或文章下载为epub文件
 
-telegraph2epub [-h] [-v version] [-f folder] [-u url] [-j jobs]
-    -h              显示帮助
+telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs] [-c cbz]
+    -h help         显示帮助
     -v version      显示版本
     -f folder       指定下载路径
     -u url          下载链接
+    -c cbz          以cbz方式存储所有图像
     -j jobs         下载线程
     Warning:        下载过程中会创建file目录以存放临时文件,请保证运行目录下无同名文件或文件夹
     Example:        telegraph2epub -u https://telegra.ph/xxx -j 32 -f book
@@ -202,6 +217,8 @@ telegraph2epub [-h] [-v version] [-f folder] [-u url] [-j jobs]
         if opt_name in ('-j', '--jobs'):
             jobs = opt_value
         
+        if opt_name in ('-c', '--cbz'):
+            cbz = True
     
     try:
         downloadImage(url, jobs)
@@ -210,12 +227,32 @@ telegraph2epub [-h] [-v version] [-f folder] [-u url] [-j jobs]
         print('你未输入URL,加入-h参数显示帮助!')
         exit()
         
-    try:
-        writeToBook(Page['title'], Page['author'], Page['content'], 'cover', Page['cover_file'], 'file', folder)
+    if cbz is False:
+        try:
+            writeToBook(Page['title'], Page['author'], Page['content'], 'cover', Page['cover_file'], 'file', folder)
+            shutil.rmtree('file')
+        except:
+            print('写入文件错误!')
+            exit()
+    else:
+        p = 0
+        for i in Page['imgUrls']:
+            p += 1
+            path = str(i)[19:]
+            filetype = path.split('.')[-1]
+            os.rename(path, 'file/' + str(p) + '.' + filetype)
+            
+        if folder is None:
+            folder = ''
+        else:
+            isExists=os.path.exists(folder) #判断路径是否存在
+            if not isExists:
+                # 如果不存在则创建目录
+                os.makedirs(folder)
+            folder = str(folder) + '/'
+        zipDir('file', folder + Page['title'] + '.cbz')
         shutil.rmtree('file')
-    except:
-        print('写入文件错误!')
-        exit()
+        
     
 
 if __name__ == "__main__":
