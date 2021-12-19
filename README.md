@@ -31,4 +31,4 @@ telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs] [-c cbz]
 
 - [ ] 制作并打包多系统的CLI程序
 - [ ] 实现GUI
-- [ ] 添加cbz支持
+- [x] 添加cbz支持
