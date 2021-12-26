@@ -8,6 +8,7 @@ from download import download
 import os
 import ssl
 import sys
+from sys import exit
 import re
 from PIL import Image
 import shutil
@@ -133,7 +134,7 @@ def getPage(url, ):
     
     # 解析图片链接
     imgUrls = []
-    images = soup.findAll('img')
+    images = soup.find_all('img')
     for i in range(0, len(images)):
         img = "https://telegra.ph" + str(images[i])[10:-3]
         imgUrls.append(img)
@@ -183,6 +184,7 @@ def main():
     jobs = 8
     folder = None
     cbz = False
+    interactive = True
     for opt_name,opt_value in opts:
         if opt_name in ('-h','--help'):
             help_str = '''
@@ -213,6 +215,7 @@ telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs] [-c cbz]
             
         if opt_name in ('-u', '--url'):
             url = opt_value
+            interactive = False
             
         if opt_name in ('-j', '--jobs'):
             jobs = opt_value
@@ -220,6 +223,23 @@ telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs] [-c cbz]
         if opt_name in ('-c', '--cbz'):
             cbz = True
     
+    # CLI交互部分
+    if interactive is True:
+        url = str(input('请输入URL: '))
+        jobs = str(input('下载线程数,留空默认为8: '))
+        if jobs == '':
+            jobs = 8
+        else:
+            jobs = int(jobs)
+        folder = str(input('请输入下载路径,留空为当前运行目录: '))
+        if folder == '':
+            folder = None
+        cbz = str(input('是否输出为cbz[y/N]: '))
+        if cbz == 'y' or cbz == 'Y':
+            cbz = True
+        elif cbz == '' or cbz == 'n' or cbz == 'N':
+            cbz = False
+        
     try:
         downloadImage(url, jobs)
         Page = getPage(url)
@@ -240,7 +260,11 @@ telegraph2epub [-h help] [-v version] [-f folder] [-u url] [-j jobs] [-c cbz]
             p += 1
             path = str(i)[19:]
             filetype = path.split('.')[-1]
-            os.rename(path, 'file/' + str(p) + '.' + filetype)
+            try:
+                os.rename(path, 'file/' + str(p) + '.' + filetype)
+            except:
+                print('文件 ' + 'file/' + str(p) + '.' + filetype + ' 不存在,可能原因为此文件被引用多次')
+                pass
             
         if folder is None:
             folder = ''
